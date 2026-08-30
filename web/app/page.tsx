@@ -120,33 +120,33 @@ export default function Home() {
             </div>
             <pre className="overflow-x-auto p-5 font-mono text-[13px] leading-relaxed">
               <code>
-                <span className="text-mint">$</span> magiccode &quot;the webhook
-                retries forever when stripe 500s — fix it&quot;
+                <span className="text-mint">$</span> magiccode
                 {"\n\n"}
-                <span className="text-haze">
-                  ▸ model qwen2.5-coder · local · 0 tokens billed
-                </span>
+                {" ████████"}
+                <span className="text-haze">{"  magiccode "}</span>
+                <span className="text-haze">v0.1.0</span>
                 {"\n"}
-                <span className="text-haze">▸ read</span> src/webhooks/stripe.ts
+                {" ██ "}
+                <span className="text-spark">██</span>
+                {" ██"}
+                <span className="text-haze">{"  Ollama · qwen2.5-coder"}</span>
                 {"\n"}
-                <span className="text-haze">▸ read</span> src/lib/retry.ts
+                {" ██ "}
+                <span className="text-spark">██</span>
+                {" ██"}
+                <span className="text-haze">{"  ~/projects/checkout-api"}</span>
                 {"\n\n"}
-                <span className="text-spark-soft">
-                  retryWithBackoff() has no max attempts. A 5xx from Stripe
-                </span>
-                {"\n"}
-                <span className="text-spark-soft">
-                  loops until the worker times out. Adding a cap + jitter.
-                </span>
+                Usage: magiccode [command] [options]
                 {"\n\n"}
-                <span className="text-haze">▸ edit</span> src/lib/retry.ts{" "}
-                <span className="text-mint">+9</span>{" "}
-                <span className="text-[#ff7b72]">-2</span>
+                Commands:
                 {"\n"}
-                <span className="text-haze">▸ run</span> npm test --
-                retry.spec.ts
+                <span className="text-haze">{"  init         Initialize a new project"}</span>
                 {"\n"}
-                <span className="text-mint">✓ 12 passing</span>
+                <span className="text-haze">{"  run          Run the current project"}</span>
+                {"\n"}
+                <span className="text-haze">{"  build        Build the project"}</span>
+                {"\n"}
+                <span className="text-haze">{"  help         Show this help message"}</span>
                 {"\n\n"}
                 <span className="text-mint">$</span>{" "}
                 <span className="inline-block h-4 w-2 translate-y-0.5 bg-haze" />
