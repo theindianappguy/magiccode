@@ -36,7 +36,7 @@ const STEPS = [
     n: "03",
     title: "Install magiccode",
     body: "Drop it on your PATH and make it executable.",
-    cmd: "curl -fsSL https://magiccode.sh/install | sh",
+    cmd: "curl -fsSL https://magiccode.iag.workers.dev/install | sh",
   },
 ];
 
@@ -97,7 +97,7 @@ export default function Home() {
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <CopyCommand command="curl -fsSL https://magiccode.sh/install | sh" />
+            <CopyCommand command="curl -fsSL https://magiccode.iag.workers.dev/install | sh" />
             <a
               href="#install"
               className="text-sm text-haze transition-colors hover:text-white sm:ml-2"
