@@ -21,9 +21,24 @@ ollama pull qwen2.5-coder
 
 ## Use
 
+Run it with no arguments for an interactive prompt:
+
+```
+ ████████  magiccode v0.2.0
+ ██ ██ ██  Ollama · qwen2.5-coder
+ ██ ██ ██  ~/projects/checkout-api
+
+┌──────────────────────────────────────────────┐
+│ > add rate limiting to the /upload route▌    │
+└──────────────────────────────────────────────┘
+  enter to send · ctrl+c to exit
+```
+
+Or one-shot:
+
 ```sh
 magiccode "the webhook retries forever when stripe 500s — fix it"
-magiccode "add rate limiting to the /upload route"
+magiccode chat
 magiccode models
 ```
 

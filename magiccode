@@ -40,7 +40,9 @@ function help() {
   console.log(`Usage: magiccode "what you want changed"
 
 Commands:
-  magiccode "<request>"    Ask the agent to work in this directory
+  magiccode                Open the prompt (same as chat)
+  magiccode chat           Open the prompt explicitly
+  magiccode "<request>"    One-shot: ask and exit
   magiccode models         List the models Ollama has pulled
   magiccode help           Show this message
 
@@ -285,22 +287,126 @@ async function runTool(name, args) {
   return `error: unknown tool ${name}`;
 }
 
+
+// ── interactive prompt ─────────────────────────────────────────────────────
+// Claude Code uses Ink (React + yoga) and opencode uses OpenTUI (solid).
+// Both come down to the same four moves, which need no dependency at all:
+// raw mode for per-keystroke input, redraw in place by walking the cursor
+// back up, box-drawing characters for the frame, and hiding the real cursor
+// so we can draw our own.
+function readPrompt() {
+  return new Promise((resolve) => {
+    const stdin = process.stdin;
+    const out = process.stdout;
+    const cols = () => Math.max(28, out.columns || 80);
+    let buf = "";
+    let drawn = 0;
+
+    const wrap = (text, w) => {
+      if (!text) return [""];
+      const lines = [];
+      for (let i = 0; i < text.length; i += w) lines.push(text.slice(i, i + w));
+      return lines;
+    };
+
+    function render() {
+      const w = cols();
+      const inner = w - 4;                       // "| " + text + " |"
+      const lines = wrap(buf, inner);
+      const bar = "─".repeat(w - 2);
+
+      if (drawn) out.write(`\x1b[${drawn}A\x1b[0J`);   // back to the top, wipe
+
+      let s = haze("┌" + bar + "┐") + "\n";
+      lines.forEach((line, i) => {
+        const lead = i === 0 ? amber("> ") : "  ";
+        const caret = i === lines.length - 1 ? amber("▌") : "";
+        const used = 2 + line.length + (caret ? 1 : 0);
+        s += haze("│") + " " + lead + line + caret + " ".repeat(Math.max(0, inner - used)) + " " + haze("│") + "\n";
+      });
+      s += haze("└" + bar + "┘") + "\n";
+      s += haze("  enter to send · ctrl+c to exit") + "\n";
+
+      out.write(s);
+      drawn = lines.length + 3;
+    }
+
+    function done(value) {
+      stdin.removeListener("data", onKey);
+      if (stdin.isTTY) stdin.setRawMode(false);
+      stdin.pause();
+      out.write("\x1b[?25h");                          // cursor back
+      if (drawn) out.write(`\x1b[${drawn}A\x1b[0J`);   // clear the box away
+      resolve(value);
+    }
+
+    // a chunk can be one keystroke or a whole pasted block — walk it
+    function onKey(chunk) {
+      const str = chunk.toString("utf8");
+      let dirty = false;
+      for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        if (ch === "\u0003") { out.write("\n"); done(null); return; }          // ctrl+c
+        if (ch === "\u0004" && buf === "") { done(null); return; }              // ctrl+d
+        if (ch === "\r" || ch === "\n") {
+          if (buf.trim()) { done(buf.trim()); return; }
+          continue;                                                            // ignore blank enter
+        }
+        if (ch === "\u007f" || ch === "\b") { buf = buf.slice(0, -1); dirty = true; continue; }
+        if (ch === "\u0015") { buf = ""; dirty = true; continue; }              // ctrl+u
+        if (ch === "\u001b") {                                                 // skip an escape sequence
+          i++;
+          while (i < str.length && !/[A-Za-z~]/.test(str[i])) i++;
+          continue;
+        }
+        if (ch === "\t" || ch >= " ") { buf += ch; dirty = true; }
+      }
+      if (dirty) render();
+    }
+
+    out.write("\x1b[?25l");                            // hide the real cursor
+    stdin.resume();
+    if (stdin.isTTY) stdin.setRawMode(true);
+    stdin.on("data", onKey);
+    render();
+  });
+}
+
+async function chat(model) {
+  const messages = [systemMessage()];
+  console.log(haze("  ask for a change in this directory\n"));
+  for (;;) {
+    const request = await readPrompt();
+    if (request === null) { console.log(haze("  bye\n")); return; }
+    console.log(`  ${amber(">")} ${request}\n`);
+    try {
+      await agent(request, model, messages);
+    } catch (err) {
+      console.error(`  ${red("✗")} ${err.message}\n`);
+    }
+  }
+}
+
 // ── agent loop ─────────────────────────────────────────────────────────────
-async function agent(request, model) {
-  const messages = [
-    {
-      role: "system",
-      content: [
+function systemMessage() {
+  return {
+    role: "system",
+    content: [
         "You are magiccode, a coding agent working inside the user's project directory.",
         "Use the tools to look at real files — never guess at file contents.",
         "Always read a file before you change it. Use edit_file to change existing files — " +
         "reserve write_file for creating new ones, and pass the COMPLETE file when you do.",
         "Make the smallest change that does the job. Match the surrounding style.",
-        "When you are done, reply with a short plain-English summary of what changed.",
-      ].join(" "),
-    },
-    { role: "user", content: request },
-  ];
+        "Do not ask the user which change to make — decide, make it, and let them approve the diff.",
+      "Only ask a question if the request is genuinely impossible to act on.",
+      "When you are done, reply with a short plain-English summary of what changed.",
+    ].join(" "),
+  };
+}
+
+async function agent(request, model, prior) {
+  const messages = prior || [systemMessage()];
+  messages.push({ role: "user", content: request });
 
   for (let step = 0; step < MAX_STEPS; step++) {
     let res;
@@ -361,6 +467,8 @@ async function agent(request, model) {
 
   const model = process.env.MAGICCODE_MODEL || models[0];
 
+  if (cmd === "chat") { banner(model); await chat(model); return; }
+
   if (cmd === "models") {
     banner(model);
     for (const m of models) console.log(`  ${m === model ? amber("● ") : haze("○ ")}${m}`);
@@ -368,7 +476,12 @@ async function agent(request, model) {
     return;
   }
 
-  if (!cmd) { banner(model); help(); return; }
+  if (!cmd) {
+    banner(model);
+    if (process.stdin.isTTY) { await chat(model); return; }
+    help();
+    return;
+  }
 
   banner(model);
   try {
