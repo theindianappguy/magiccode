@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>magiccode - AI-Powered CLI Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: white;
+        }
+        .container {
+            padding: 0;
+            margin: 0;
+        }
+        header {
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        h2 {
+            color: #3498db;
+        }
+        .intro {
+            background-color: white;
+            padding: 0;
+            margin: 0;
+            border-radius: 0;
+        }
+        .step {
+            background-color: white;
+            padding: 0;
+            margin: 0;
+            border-radius: 0;
+        }
+        code {
+            background-color: #eee;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .command {
+            background-color: #f5f5f5;
+            color: #333;
+            padding: 15px;
+            border-radius: 0;
+            font-family: monospace;
+            overflow-x: auto;
+            margin: 0;
+        }
+        .note {
+            background-color: white;
+            padding: 0;
+            margin: 0;
+            border-radius: 0;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 0;
+            margin: 0;
+        }
+        .feature-card {
+            background-color: white;
+            padding: 0;
+            margin: 0;
+            border-radius: 0;
+            text-align: center;
+        }
+        .feature-card h3 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>magiccode</h1>
+            <p>AI-Powered Command Line Interface for Developers</p>
+        </header>
+
+        <div class="intro">
+            <h2>Welcome to magiccode!</h2>
+            <p><strong>magiccode</strong> is a powerful CLI tool that combines the convenience of OpenCode with local AI capabilities powered by Ollama. 
+            With magiccode, you can seamlessly integrate LLMs into your development workflow directly from your terminal.</p>
+        </div>
+
+        <div class="step">
+            <h2>1. Prerequisites</h2>
+            <p>Before you can use magiccode with Ollama models, ensure you have the following installed:</p>
+            <ul>
+                <li><strong>Ollama</strong>: The local LLM inference engine</li>
+                <li>A compatible shell (bash, zsh)</li>
+                <li>Basic terminal skills</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>2. Install Ollama</h2>
+            <p>Install Ollama by following the instructions for your operating system:</p>
+            
+            <h3>For macOS/Linux:</h3>
+            <div class="command">
+                curl -fsSL https://ollama.com/install.sh | sh
+            </div>
+
+            <h3>For Windows:</h3>
+            <p>Visit <a href="https://ollama.com/download" target="_blank">https://ollama.com/download</a> and download the Windows installer.</p>
+            
+            <div class="note">
+                <p><strong>Note:</strong> After installation, restart your terminal or run <code>source ~/.bashrc</code> (or equivalent) for the ollama command to be recognized.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>3. Install magiccode</h2>
+            <p>Download and make magiccode executable:</p>
+            <div class="command">
+                curl -o magiccode https://raw.githubusercontent.com/sanskartiwari/magiccode/main/magiccode<br>
+                chmod +x magiccode
+            </div>
+            <p><strong>Alternative:</strong> If you already have a copy of the script, place it in your PATH.</p>
+        </div>
+
+        <div class="step">
+            <h2>4. Get Started with magiccode</h2>
+            <p>Create a new project or work with existing projects:</p>
+            <ul>
+                <li><strong>Initialize a new project:</strong> 
+                    <div class="command">magiccode init my-project</div>
+                </li>
+                <li><strong>Run your project:</strong>
+                    <div class="command">magiccode run</div>
+                </li>
+                <li><strong>Build your project:</strong>
+                    <div class="command">magiccode build</div>
+                </li>
+                <li><strong>Deploy your project:</strong>
+                    <div class="command">magiccode deploy</div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>5. Using Ollama Models</h2>
+            <p>magiccode integrates with Ollama to provide AI capabilities:</p>
+            
+            <h3>Check available models:</h3>
+            <div class="command">
+                ollama list
+            </div>
+            
+            <h3>Download a model (example: llama3):</h3>
+            <div class="command">
+                ollama pull llama3
+            </div>
+            
+            <h3>Use magiccode with AI:</h3>
+            <p>While specific AI integration features will be added in future versions, magiccode is designed to be enhanced to leverage Ollama's capabilities through command extensions.</p>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <h3>Project Management</h3>
+                <p>Create, build, and deploy projects effortlessly with standardized workflows</p>
+            </div>
+            <div class="feature-card">
+                <h3>AI Integration</h3>
+                <p>Seamlessly connect with local LLMs through Ollama for intelligent assistance</p>
+            </div>
+            <div class="feature-card">
+                <h3>Developer Friendly</h3>
+                <p>Built with developers in mind - simple commands, clear structure</p>
+            </div>
+        </div>
+
+        <div class="note">
+            <p><strong>Tip:</strong> To explore more about magiccode and its features, run <code>magiccode help</code> in your terminal.</p>
+        </div>
+    </div>
+</body>
+</html>
