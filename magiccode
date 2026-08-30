@@ -1,140 +1,382 @@
-#!/bin/bash
+#!/usr/bin/env node
+"use strict";
 
-# magiccode — a coding agent that runs on your machine
-# https://magiccode.iag.workers.dev
+// magiccode — a coding agent that runs on your machine
+// https://github.com/theindianappguy/magiccode
 
-VERSION="0.1.0"
+const fs = require("fs");
+const path = require("path");
+const readline = require("readline");
+const { spawnSync } = require("child_process");
+const os = require("os");
 
-# palette: amber #ff9500, off-white #ececf3, haze #8b8b99
-if [ -t 1 ] && [ "${NO_COLOR:-}" = "" ]; then
-  A=$'\033[38;2;255;149;0m'   # amber
-  W=$'\033[38;2;236;236;243m' # off-white
-  D=$'\033[38;2;139;139;153m' # haze
-  R=$'\033[0m'
-else
-  A=""; W=""; D=""; R=""
-fi
+const VERSION = "0.2.0";
+const HOST = (process.env.OLLAMA_HOST || "http://127.0.0.1:11434").replace(/\/$/, "");
+const MAX_STEPS = 16;
+const MAX_READ = 60_000;   // chars returned from a single read_file
+const MAX_FILES = 400;
 
-# runtime facts, gathered once
-engine_line() {
-  if command -v ollama >/dev/null 2>&1; then
-    local m
-    m=$(ollama list 2>/dev/null | awk 'NR==2{print $1}')
-    if [ -n "$m" ]; then
-      printf '%s' "Ollama · ${m}"
-    else
-      printf '%s' "Ollama · no model pulled — ollama pull qwen2.5-coder"
-    fi
-  else
-    printf '%s' "Ollama not found — https://ollama.com"
-  fi
+// ── palette ────────────────────────────────────────────────────────────────
+const tty = process.stdout.isTTY && !process.env.NO_COLOR;
+const c = (code) => (s) => (tty ? `\x1b[${code}m${s}\x1b[0m` : String(s));
+const amber = c("38;2;255;149;0");
+const white = c("38;2;236;236;243");
+const haze  = c("38;2;139;139;153");
+const mint  = c("38;2;62;207;142");
+const red   = c("38;2;255;123;114");
+
+// ── banner ─────────────────────────────────────────────────────────────────
+function banner(model) {
+  const cwd = process.cwd().replace(os.homedir(), "~");
+  const engine = model ? `Ollama · ${model}` : "Ollama";
+  console.log();
+  console.log(` ${white("████████")}  ${white("magiccode")} ${haze("v" + VERSION)}`);
+  console.log(` ${white("██")} ${amber("██")} ${white("██")}  ${haze(engine)}`);
+  console.log(` ${white("██")} ${amber("██")} ${white("██")}  ${haze(cwd)}`);
+  console.log();
 }
 
-# where we are, with $HOME collapsed to ~
-here() {
-  local tilde="~"
-  printf '%s' "${PWD/#$HOME/$tilde}"
+function help() {
+  console.log(`Usage: magiccode "what you want changed"
+
+Commands:
+  magiccode "<request>"    Ask the agent to work in this directory
+  magiccode models         List the models Ollama has pulled
+  magiccode help           Show this message
+
+Environment:
+  MAGICCODE_MODEL   Model to use (default: first model Ollama lists)
+  MAGICCODE_YES     Set to 1 to approve every edit without asking
+  OLLAMA_HOST       Default http://127.0.0.1:11434
+
+Examples:
+  magiccode "add rate limiting to the /upload route"
+  magiccode "why does the webhook retry forever?"`);
 }
 
-banner() {
-  local eng cwd
-  eng=$(engine_line)
-  cwd=$(here)
-  printf '\n'
-  printf ' %s████████%s  %smagiccode%s %sv%s%s\n' "$W" "$R" "$W" "$R" "$D" "$VERSION" "$R"
-  printf ' %s██%s %s██%s %s██%s  %s%s%s\n' "$W" "$R" "$A" "$R" "$W" "$R" "$D" "$eng" "$R"
-  printf ' %s██%s %s██%s %s██%s  %s%s%s\n' "$W" "$R" "$A" "$R" "$W" "$R" "$D" "$cwd" "$R"
-  printf '\n'
+// ── ollama ─────────────────────────────────────────────────────────────────
+async function ollama(pathname, body) {
+  const res = await fetch(HOST + pathname, {
+    method: body ? "POST" : "GET",
+    headers: { "content-type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(`ollama ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  return res.json();
 }
 
-# Function to display help
-show_help() {
-    echo "Usage: magiccode [command] [options]"
-    echo ""
-    echo "Commands:"
-    echo "  init         Initialize a new project"
-    echo "  run          Run the current project"
-    echo "  build        Build the project"
-    echo "  deploy       Deploy the project"
-    echo "  help         Show this help message"
-    echo ""
-    echo "Examples:"
-    echo "  magiccode init my-project"
-    echo "  magiccode run"
-    echo "  magiccode build"
+async function listModels() {
+  try {
+    const { models } = await ollama("/api/tags");
+    return (models || []).map((m) => m.name);
+  } catch {
+    return null; // ollama unreachable
+  }
 }
 
-# Function to initialize a project
-init_project() {
-    if [ $# -eq 0 ]; then
-        echo "Error: Project name required"
-        return 1
-    fi
-    
-    local project_name="$1"
-    echo "Initializing project: $project_name"
-    
-    # Create basic directory structure
-    mkdir -p "$project_name"
-    cd "$project_name"
-    
-    # Create basic files
-    touch "README.md"
-    echo "# $project_name" > "README.md"
-    echo "This is a placeholder README file for your project." >> "README.md"
-    
-    # Create basic package.json
-    cat > "package.json" << EOF
-{
-  "name": "$project_name",
-  "version": "0.1.0",
-  "description": "Generated by magiccode",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
+// ── workspace helpers ──────────────────────────────────────────────────────
+const SKIP_DIR = new Set([
+  ".git", "node_modules", ".next", ".open-next", ".wrangler", "dist", "build",
+  ".venv", "venv", "__pycache__", ".cache", "vendor", "target", ".DS_Store",
+]);
+const SKIP_EXT = new Set([
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".zip", ".gz",
+  ".mp4", ".mov", ".mp3", ".wav", ".woff", ".woff2", ".ttf", ".otf", ".lock",
+]);
+
+function walk(dir, root, out) {
+  if (out.length >= MAX_FILES) return out;
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
+  for (const e of entries) {
+    if (out.length >= MAX_FILES) break;
+    if (e.name.startsWith(".") && e.name !== ".gitignore") continue;
+    if (SKIP_DIR.has(e.name)) continue;
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) walk(full, root, out);
+    else if (!SKIP_EXT.has(path.extname(e.name).toLowerCase())) {
+      out.push(path.relative(root, full));
+    }
+  }
+  return out;
+}
+
+// keep every path inside the directory magiccode was invoked from
+function safeResolve(rel) {
+  const root = process.cwd();
+  const full = path.resolve(root, rel);
+  if (full !== root && !full.startsWith(root + path.sep)) {
+    throw new Error(`refusing to touch a path outside ${root}`);
+  }
+  return full;
+}
+
+function diff(before, after, label) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "magiccode-"));
+  const a = path.join(tmp, "before"), b = path.join(tmp, "after");
+  fs.writeFileSync(a, before);
+  fs.writeFileSync(b, after);
+  const r = spawnSync("git", [
+    "diff", "--no-index", tty ? "--color=always" : "--no-color",
+    "--src-prefix=old/", "--dst-prefix=new/", "--", a, b,
+  ], { encoding: "utf8" });
+  fs.rmSync(tmp, { recursive: true, force: true });
+  const body = (r.stdout || "").split("\n").slice(4).join("\n").trim();
+  if (body) return body;
+  // git missing — fall back to a blunt line count
+  const bl = before.split("\n").length, al = after.split("\n").length;
+  return `${label}: ${bl} lines → ${al} lines`;
+}
+
+let rl = null;
+function ask(question) {
+  if (process.env.MAGICCODE_YES === "1") {
+    console.log(question + amber("y (MAGICCODE_YES)"));
+    return Promise.resolve(true);
+  }
+  if (!process.stdin.isTTY) return Promise.resolve(false);
+  rl = rl || readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) =>
+    rl.question(question, (a) => resolve(/^y(es)?$/i.test(a.trim())))
+  );
+}
+
+// ── tools ──────────────────────────────────────────────────────────────────
+const TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "list_files",
+      description: "List the text files in the working directory. Call this first to orient yourself.",
+      parameters: { type: "object", properties: {}, required: [] },
+    },
   },
-  "keywords": [],
-  "author": "magiccode",
-  "license": "MIT"
+  {
+    type: "function",
+    function: {
+      name: "read_file",
+      description: "Read a file's full contents. Always read a file before editing it.",
+      parameters: {
+        type: "object",
+        properties: { path: { type: "string", description: "Path relative to the working directory" } },
+        required: ["path"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "write_file",
+      description: "Write the complete new contents of a file. The user is shown a diff and must approve it.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string" },
+          content: { type: "string", description: "The ENTIRE new file, not a fragment" },
+        },
+        required: ["path", "content"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "edit_file",
+      description:
+        "Replace an exact snippet in a file. Prefer this over write_file for anything but a brand new file — " +
+        "it is cheaper and cannot lose the rest of the file. old_string must appear EXACTLY once, " +
+        "so include enough surrounding lines to make it unique.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string" },
+          old_string: { type: "string", description: "Exact text to replace, copied verbatim from the file" },
+          new_string: { type: "string", description: "Text to put in its place" },
+        },
+        required: ["path", "old_string", "new_string"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "run_command",
+      description: "Run a shell command in the working directory, e.g. a test command. The user must approve it.",
+      parameters: {
+        type: "object",
+        properties: { command: { type: "string" } },
+        required: ["command"],
+      },
+    },
+  },
+];
+
+// show a diff, ask, and only then touch the disk
+async function proposeWrite(full, before, afterRaw, label) {
+  // don't silently strip a file's trailing newline
+  let after = afterRaw;
+  if (before.endsWith("\n") && after.length && !after.endsWith("\n")) after += "\n";
+
+  if (before === after) return "no change — file already matches";
+  console.log(`\n  ${haze("▸ edit")} ${label}\n`);
+  console.log(diff(before, after, label));
+  console.log();
+  const ok = await ask(`  ${amber("apply this change?")} [y/N] `);
+  if (!ok) {
+    console.log(`  ${red("✗ skipped")}\n`);
+    return "the user rejected this edit — do not retry it, ask them what they would prefer";
+  }
+  fs.mkdirSync(path.dirname(full), { recursive: true });
+  fs.writeFileSync(full, after);
+  console.log(`  ${mint("✓ written")}\n`);
+  return `wrote ${label}`;
 }
-EOF
 
-    echo "Project '$project_name' initialized successfully!"
-    echo "Current directory: $(pwd)"
+async function runTool(name, args) {
+  if (name === "list_files") {
+    const files = walk(process.cwd(), process.cwd(), []);
+    console.log(`  ${haze("▸ list")} ${files.length} files`);
+    return files.join("\n") || "(no files)";
+  }
+
+  if (name === "read_file") {
+    const full = safeResolve(args.path);
+    if (!fs.existsSync(full)) return `error: ${args.path} does not exist`;
+    const body = fs.readFileSync(full, "utf8");
+    console.log(`  ${haze("▸ read")} ${args.path}`);
+    return body.length > MAX_READ ? body.slice(0, MAX_READ) + "\n…(truncated)" : body;
+  }
+
+  if (name === "write_file") {
+    const full = safeResolve(args.path);
+    const before = fs.existsSync(full) ? fs.readFileSync(full, "utf8") : "";
+    return proposeWrite(full, before, args.content ?? "", args.path);
+  }
+
+  if (name === "edit_file") {
+    const full = safeResolve(args.path);
+    if (!fs.existsSync(full)) return `error: ${args.path} does not exist — use write_file to create it`;
+    const before = fs.readFileSync(full, "utf8");
+    const { old_string, new_string } = args;
+    if (typeof old_string !== "string" || old_string === "") return "error: old_string is required";
+    const hits = before.split(old_string).length - 1;
+    if (hits === 0) {
+      return `error: old_string was not found in ${args.path}. Read the file again and copy the snippet exactly, including indentation.`;
+    }
+    if (hits > 1) {
+      return `error: old_string appears ${hits} times in ${args.path}. Include more surrounding lines so it matches only once.`;
+    }
+    return proposeWrite(full, before, before.replace(old_string, new_string ?? ""), args.path);
+  }
+
+  if (name === "run_command") {
+    console.log(`\n  ${haze("▸ run")} ${args.command}`);
+    const ok = await ask(`  ${amber("run it?")} [y/N] `);
+    if (!ok) {
+      console.log(`  ${red("✗ skipped")}\n`);
+      return "the user declined to run this command";
+    }
+    const r = spawnSync(args.command, { shell: true, encoding: "utf8", cwd: process.cwd() });
+    const out = ((r.stdout || "") + (r.stderr || "")).slice(0, 8000);
+    console.log(out.trim() ? out.trim() + "\n" : `  ${haze("(no output)")}\n`);
+    return `exit ${r.status}\n${out}`;
+  }
+
+  return `error: unknown tool ${name}`;
 }
 
-# Main command handling
-banner
-command="$1"
+// ── agent loop ─────────────────────────────────────────────────────────────
+async function agent(request, model) {
+  const messages = [
+    {
+      role: "system",
+      content: [
+        "You are magiccode, a coding agent working inside the user's project directory.",
+        "Use the tools to look at real files — never guess at file contents.",
+        "Always read a file before you change it. Use edit_file to change existing files — " +
+        "reserve write_file for creating new ones, and pass the COMPLETE file when you do.",
+        "Make the smallest change that does the job. Match the surrounding style.",
+        "When you are done, reply with a short plain-English summary of what changed.",
+      ].join(" "),
+    },
+    { role: "user", content: request },
+  ];
 
-case "$command" in
-    "init")
-        init_project "$2"
-        ;;
-    "run")
-        echo "Running project..."
-        if [ -f "package.json" ]; then
-            npm start
-        else
-            echo "No project found. Use 'magiccode init <project-name>' first."
-        fi
-        ;;
-    "build")
-        echo "Building project..."
-        echo "Build completed successfully!"
-        ;;
-    "deploy")
-        echo "Deploying project..."
-        echo "Deployment completed successfully!"
-        ;;
-    "help"|"--help"|"-h")
-        show_help
-        ;;
-    "")
-        show_help
-        ;;
-    *)
-        echo "Unknown command: $command"
-        echo "Use 'magiccode help' for available commands"
-        ;;
-esac
+  for (let step = 0; step < MAX_STEPS; step++) {
+    let res;
+    try {
+      res = await ollama("/api/chat", { model, messages, tools: TOOLS, stream: false });
+    } catch (err) {
+      if (/does not support tools/i.test(err.message)) {
+        console.error(`\n${red("✗")} ${model} cannot call tools, so it cannot edit files.`);
+        console.error(`  Pull one that can:  ${white("ollama pull qwen2.5-coder")}\n`);
+        process.exit(1);
+      }
+      throw err;
+    }
+
+    const msg = res.message || {};
+    messages.push(msg);
+
+    const calls = msg.tool_calls || [];
+    if (calls.length === 0) {
+      if (msg.content && msg.content.trim()) console.log("\n" + msg.content.trim() + "\n");
+      return;
+    }
+
+    for (const call of calls) {
+      const name = call.function?.name;
+      let args = call.function?.arguments ?? {};
+      if (typeof args === "string") { try { args = JSON.parse(args); } catch { args = {}; } }
+      let result;
+      try { result = await runTool(name, args); }
+      catch (err) { result = `error: ${err.message}`; }
+      messages.push({ role: "tool", tool_name: name, content: String(result) });
+    }
+  }
+  console.log(haze(`\nstopped after ${MAX_STEPS} steps — run it again to continue\n`));
+}
+
+// ── entry ──────────────────────────────────────────────────────────────────
+(async function main() {
+  const argv = process.argv.slice(2);
+  const cmd = argv[0];
+
+  if (cmd === "help" || cmd === "--help" || cmd === "-h") { banner(null); help(); return; }
+  if (cmd === "version" || cmd === "--version" || cmd === "-v") { console.log(VERSION); return; }
+
+  const models = await listModels();
+  if (models === null) {
+    banner(null);
+    console.error(`${red("✗")} Can't reach Ollama at ${HOST}`);
+    console.error(`  Install it from ${white("https://ollama.com")}, then: ${white("ollama serve")}\n`);
+    process.exit(1);
+  }
+  if (models.length === 0) {
+    banner(null);
+    console.error(`${red("✗")} Ollama has no models pulled.`);
+    console.error(`  Try: ${white("ollama pull qwen2.5-coder")}\n`);
+    process.exit(1);
+  }
+
+  const model = process.env.MAGICCODE_MODEL || models[0];
+
+  if (cmd === "models") {
+    banner(model);
+    for (const m of models) console.log(`  ${m === model ? amber("● ") : haze("○ ")}${m}`);
+    console.log();
+    return;
+  }
+
+  if (!cmd) { banner(model); help(); return; }
+
+  banner(model);
+  try {
+    await agent(argv.join(" "), model);
+  } catch (err) {
+    console.error(`\n${red("✗")} ${err.message}\n`);
+    process.exitCode = 1;
+  } finally {
+    if (rl) rl.close();
+  }
+})();
