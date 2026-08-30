@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <title>magiccode — a sealed chip: an amber core held inside a hard, closed frame. The model runs on your own machine and nothing leaves the box.</title>
+
+  <rect x="0" y="0" width="240" height="240" fill="#07070a"/>
+
+  <!-- package pins: local hardware -->
+  <rect x="28" y="86" width="16" height="24" fill="#8b8b9e"/>
+  <rect x="28" y="130" width="16" height="24" fill="#8b8b9e"/>
+  <rect x="196" y="86" width="16" height="24" fill="#8b8b9e"/>
+  <rect x="196" y="130" width="16" height="24" fill="#8b8b9e"/>
+
+  <!-- closed frame, with an orientation notch cut into the top edge -->
+  <path fill="#ececf3" fill-rule="evenodd"
+        d="M44 44 H105 V56 H135 V44 H196 V196 H44 Z
+           M64 64 H176 V176 H64 Z"/>
+
+  <!-- contained core: a die, chamfered hard on the top-left -->
+  <path fill="#ff9500" d="M116 84 H156 V156 H84 V116 Z"/>
+</svg>

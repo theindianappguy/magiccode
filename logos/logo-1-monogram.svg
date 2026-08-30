@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <title>magiccode monogram: a stencil lowercase "m" built from five solid blocks on a monospace grid, its centre stroke a full-height amber block cursor rising through the crossbar</title>
+
+  <!-- canvas -->
+  <rect x="0" y="0" width="240" height="240" fill="#07070a"/>
+
+  <!-- crossbar, left half: outer stem across to the cursor column -->
+  <rect x="40" y="44" width="67" height="28" fill="#ececf3"/>
+  <!-- crossbar, right half -->
+  <rect x="133" y="44" width="67" height="28" fill="#ececf3"/>
+
+  <!-- outer stems, hung from the crossbar -->
+  <rect x="40" y="72" width="26" height="124" fill="#ececf3"/>
+  <rect x="174" y="72" width="26" height="124" fill="#ececf3"/>
+
+  <!-- centre stroke = full-height block cursor, cutting through the crossbar -->
+  <rect x="107" y="44" width="26" height="152" fill="#ff9500"/>
+</svg>

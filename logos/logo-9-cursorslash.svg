@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" shape-rendering="geometricPrecision">
+  <title>magiccode - cursor slash: the code tag with its slash replaced by a full-height amber block cursor. The thing that blinks sits where the code goes.</title>
+  <rect x="0" y="0" width="240" height="240" fill="#07070a"/>
+  <polygon points="88,80 88,96 66,120 88,144 88,160 44,120" fill="#ececf3"/>
+  <polygon points="99,164 125,164 141,76 115,76" fill="#ff9500"/>
+  <polygon points="152,80 152,96 174,120 152,144 152,160 196,120" fill="#ececf3"/>
+</svg>

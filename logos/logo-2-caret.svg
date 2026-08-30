@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" fill="none">
+  <title>magiccode — the shell prompt: a heavy amber chevron caret followed by a solid block cursor, cut from flat angular geometry.</title>
+
+  <!-- canvas -->
+  <rect x="0" y="0" width="240" height="240" fill="#07070a"/>
+
+  <!-- caret: horizontally-offset chevron, sharp apex, flat mitred ends -->
+  <polygon points="48,56 82,56 134,120 82,184 48,184 100,120" fill="#ff9500"/>
+
+  <!-- block cursor -->
+  <rect x="148" y="120" width="44" height="64" fill="#ececf3"/>
+</svg>

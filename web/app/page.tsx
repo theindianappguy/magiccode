@@ -43,23 +43,20 @@ const STEPS = [
 export default function Home() {
   return (
     <main className="min-h-screen">
-      {/* ambient glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 h-[520px] opacity-60"
-        style={{
-          background:
-            "radial-gradient(60% 100% at 50% 0%, rgba(124,92,255,0.22), transparent 70%)",
-        }}
-      />
-
       <div className="relative mx-auto max-w-5xl px-6">
         {/* nav */}
         <nav className="flex items-center justify-between py-7">
           <div className="flex items-center gap-2.5">
-            <div className="grid h-7 w-7 place-items-center rounded-md bg-spark font-mono text-sm font-bold text-white">
-              m
-            </div>
+            <svg
+              viewBox="24 24 192 192"
+              className="h-7 w-7 shrink-0"
+              aria-hidden="true"
+            >
+              <rect x="40" y="44" width="160" height="28" fill="#ececf3" />
+              <rect x="40" y="72" width="26" height="124" fill="#ececf3" />
+              <rect x="107" y="72" width="26" height="124" fill="#ff9500" />
+              <rect x="174" y="72" width="26" height="124" fill="#ececf3" />
+            </svg>
             <span className="text-[15px] font-medium tracking-tight">
               magiccode
             </span>
@@ -82,8 +79,8 @@ export default function Home() {
 
         {/* hero */}
         <section className="pt-16 pb-20 sm:pt-24">
-          <div className="inline-flex items-center gap-2 rounded-full border border-line bg-ink-soft px-3 py-1.5 text-xs text-haze">
-            <span className="h-1.5 w-1.5 rounded-full bg-mint" />
+          <div className="inline-flex items-center gap-2 border border-line bg-ink-soft px-3 py-1.5 text-xs text-haze">
+            <span className="h-1.5 w-1.5 bg-mint" />
             Open source · MIT · No account required
           </div>
 
@@ -112,11 +109,11 @@ export default function Home() {
 
         {/* terminal */}
         <section className="pb-24">
-          <div className="overflow-hidden rounded-xl border border-line bg-ink-soft shadow-2xl shadow-black/50">
+          <div className="overflow-hidden border border-line bg-ink-soft">
             <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+              <span className="h-2.5 w-2.5 bg-[#ff5f57]" />
+              <span className="h-2.5 w-2.5 bg-[#febc2e]" />
+              <span className="h-2.5 w-2.5 bg-[#28c840]" />
               <span className="ml-2 font-mono text-xs text-haze">
                 ~/projects/checkout-api
               </span>
@@ -196,7 +193,7 @@ export default function Home() {
                 <div className="min-w-0 flex-1">
                   <h3 className="text-base font-medium">{s.title}</h3>
                   <p className="mt-1 text-[15px] text-haze">{s.body}</p>
-                  <div className="mt-3.5 overflow-x-auto rounded-lg border border-line bg-ink-soft px-4 py-3 font-mono text-[13px]">
+                  <div className="mt-3.5 overflow-x-auto border border-line bg-ink-soft px-4 py-3 font-mono text-[13px]">
                     <span className="text-mint">$ </span>
                     {s.cmd}
                   </div>
@@ -205,7 +202,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="mt-14 rounded-xl border border-line bg-ink-soft p-6">
+          <div className="mt-14 border border-line bg-ink-soft p-6">
             <p className="text-[15px] text-haze">
               Then point it at any repo and describe what you want changed:
             </p>

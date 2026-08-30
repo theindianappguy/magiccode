@@ -8,8 +8,8 @@
   --color-ink-soft: #0e0e14;
   --color-line: #1e1e2a;
   --color-haze: #8b8b9e;
-  --color-spark: #7c5cff;
-  --color-spark-soft: #a78bfa;
+  --color-spark: #ff9500;
+  --color-spark-soft: #ffb340;
   --color-mint: #4ade80;
 }
 
@@ -25,5 +25,5 @@ body {
 
 ::selection {
   background: var(--color-spark);
-  color: white;
+  color: #07070a;
 }

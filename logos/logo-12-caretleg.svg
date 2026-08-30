@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" shape-rendering="geometricPrecision">
+  <title>magiccode monogram - caret leg: a stencil m whose final leg is not a stem but the shell caret itself, so the letter ends by pointing forward. Asymmetric silhouette, amber cursor at the centre.</title>
+  <rect x="0" y="0" width="240" height="240" fill="#07070a"/>
+  <rect x="26" y="44" width="67" height="28" fill="#ececf3"/>
+  <rect x="119" y="44" width="67" height="28" fill="#ececf3"/>
+  <rect x="26" y="72" width="26" height="124" fill="#ececf3"/>
+  <polygon points="160,72 186,72 214,134 186,196 160,196 188,134" fill="#ececf3"/>
+  <rect x="93" y="44" width="26" height="152" fill="#ff9500"/>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" shape-rendering="geometricPrecision">
+  <title>magiccode - code chevron: the shell caret built from five stacked lines of code, their ragged right edges forming the point. Code from up close, a prompt from across the room.</title>
+  <rect x="0" y="0" width="240" height="240" fill="#07070a"/>
+  <rect x="56" y="50" width="44" height="18" fill="#ececf3"/>
+  <rect x="56" y="80" width="78" height="18" fill="#ececf3"/>
+  <rect x="56" y="110" width="112" height="18" fill="#ff9500"/>
+  <rect x="56" y="140" width="78" height="18" fill="#ececf3"/>
+  <rect x="56" y="170" width="44" height="18" fill="#ececf3"/>
+</svg>

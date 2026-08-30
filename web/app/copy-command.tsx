@@ -18,7 +18,7 @@ export function CopyCommand({ command }: { command: string }) {
   return (
     <button
       onClick={copy}
-      className="group flex items-center gap-3 rounded-lg border border-line bg-ink-soft px-4 py-3 text-left font-mono text-[13px] transition-colors hover:border-spark/60"
+      className="group flex items-center gap-3 border border-line bg-ink-soft px-4 py-3 text-left font-mono text-[13px] transition-colors hover:border-spark/60"
     >
       <span className="text-mint">$</span>
       <span className="truncate">{command}</span>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" shape-rendering="geometricPrecision">
+  <title>magiccode - magic caret: a shell caret whose lower arm breaks into three drifting amber shards, as if the prompt is coming apart into the thing it makes.</title>
+  <rect x="0" y="0" width="240" height="240" fill="#07070a"/>
+  <g transform="translate(13,-5)">
+    <polygon points="62,50 90,50 160,120 132,120" fill="#ececf3"/>
+    <polygon points="132,120 160,120 136,144 108,144" fill="#ff9500"/>
+    <polygon points="100,152 128,152 104,176 76,176" fill="#ff9500"/>
+    <polygon points="72,184 96,184 78,200 54,200" fill="#ff9500"/>
+  </g>
+</svg>

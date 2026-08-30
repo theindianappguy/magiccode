@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" shape-rendering="geometricPrecision">
+  <title>magiccode monogram - split m: a solid stencil m severed along a 45 degree channel with an amber rule running through the cut, so the letter is opened up like a diff rather than merely coloured.</title>
+  <rect x="0" y="0" width="240" height="240" fill="#07070a"/>
+  <rect x="40" y="44" width="160" height="28" fill="#ececf3"/>
+  <rect x="40" y="72" width="26" height="124" fill="#ececf3"/>
+  <rect x="107" y="72" width="26" height="124" fill="#ececf3"/>
+  <rect x="174" y="72" width="26" height="124" fill="#ececf3"/>
+  <polygon points="-1,199 41,241 241,41 199,-1" fill="#07070a"/>
+  <polygon points="14,214 26,226 226,26 214,14" fill="#ff9500"/>
+</svg>
