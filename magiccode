@@ -308,21 +308,40 @@ const newer = (a, b) => {                       // is a newer than b?
   return false;
 };
 
-// at most once a day, never blocking for long, never fatal
-async function latestVersion() {
+// The banner reads whatever we already know — never the network, so startup
+// is instant. A refresh runs in the background and lands in time for the next
+// run. A fresh install has no cache and shows nothing, which is correct: it
+// is already the newest version.
+function cachedVersion() {
+  try { return JSON.parse(fs.readFileSync(CHECK_FILE, "utf8")).latest || null; }
+  catch { return null; }
+}
+
+// Hand the lookup to a detached child, so an in-flight request can never hold
+// this process open. Costs one process spawn a day.
+function refreshVersion() {
   try {
-    const cached = JSON.parse(fs.readFileSync(CHECK_FILE, "utf8"));
-    if (Date.now() - cached.t < CHECK_EVERY) return cached.latest;
+    const c = JSON.parse(fs.readFileSync(CHECK_FILE, "utf8"));
+    if (Date.now() - c.t < CHECK_EVERY) return;        // checked recently
   } catch {}
   try {
-    const res = await fetch(VERSION_URL, { signal: AbortSignal.timeout(1500) });
+    const { spawn } = require("child_process");
+    spawn(process.execPath, [__filename, "__refresh-version"], {
+      detached: true,
+      stdio: "ignore",
+    }).unref();
+  } catch {}
+}
+
+// the detached child: fetch, write, exit. Never prints, never fails loudly.
+async function refreshVersionNow() {
+  try {
+    const res = await fetch(VERSION_URL, { signal: AbortSignal.timeout(8000) });
     const { version } = await res.json();
+    if (!version) return;
     fs.mkdirSync(STATE_DIR, { recursive: true });
     fs.writeFileSync(CHECK_FILE, JSON.stringify({ t: Date.now(), latest: version }));
-    return version;
-  } catch {
-    return null;                                // offline is not an error
-  }
+  } catch {}                                           // offline is not an error
 }
 
 // where this script actually lives, following any symlink
@@ -351,13 +370,17 @@ async function update() {
     return;
   }
   console.log(`  ${haze("updating")} ${target.replace(os.homedir(), "~")}`);
-  let body;
-  try {
-    const res = await fetch(RAW_URL, { signal: AbortSignal.timeout(15000) });
-    if (!res.ok) throw new Error(`github returned ${res.status}`);
-    body = await res.text();
-  } catch (err) {
-    console.error(`  ${red("✗")} could not download: ${err.message}\n`);
+  let body, lastErr;
+  for (let attempt = 0; attempt < 3 && body === undefined; attempt++) {
+    if (attempt) await new Promise((r) => setTimeout(r, 400 * attempt));
+    try {
+      const res = await fetch(RAW_URL, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new Error(`github returned ${res.status}`);
+      body = await res.text();
+    } catch (err) { lastErr = err; }
+  }
+  if (body === undefined) {
+    console.error(`  ${red("✗")} could not download: ${lastErr.message}\n`);
     process.exitCode = 1;
     return;
   }
@@ -534,11 +557,14 @@ async function agent(request, model, prior) {
   const argv = process.argv.slice(2);
   const cmd = argv[0];
 
+  if (cmd === "__refresh-version") { await refreshVersionNow(); return; }
+
   if (cmd === "update") { console.log(); await update(); return; }
-  if (cmd === "help" || cmd === "--help" || cmd === "-h") { banner(null, await latestVersion()); help(); return; }
+  if (cmd === "help" || cmd === "--help" || cmd === "-h") { refreshVersion(); banner(null, cachedVersion()); help(); return; }
   if (cmd === "version" || cmd === "--version" || cmd === "-v") { console.log(VERSION); return; }
 
-  const latest = await latestVersion();
+  const latest = cachedVersion();
+  refreshVersion();
   const models = await listModels();
   if (models === null) {
     banner(null, latest);
