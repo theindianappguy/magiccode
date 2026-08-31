@@ -19,6 +19,16 @@ Needs Node 18+ and Ollama with a model that can call tools:
 ollama pull qwen2.5-coder
 ```
 
+## Update
+
+```sh
+magiccode update
+```
+
+It checks for a new version once a day and tells you in the banner when there
+is one. If you are running from a git checkout it will say so and leave your
+working copy alone.
+
 ## Use
 
 Run it with no arguments for an interactive prompt:

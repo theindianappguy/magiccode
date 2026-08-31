@@ -10,11 +10,16 @@ const readline = require("readline");
 const { spawnSync } = require("child_process");
 const os = require("os");
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 const HOST = (process.env.OLLAMA_HOST || "http://127.0.0.1:11434").replace(/\/$/, "");
 const MAX_STEPS = 16;
 const MAX_READ = 60_000;   // chars returned from a single read_file
 const MAX_FILES = 400;
+const VERSION_URL = "https://magiccode.iag.workers.dev/version";
+const RAW_URL = "https://raw.githubusercontent.com/theindianappguy/magiccode/master/magiccode";
+const STATE_DIR = path.join(os.homedir(), ".magiccode");
+const CHECK_FILE = path.join(STATE_DIR, "update-check.json");
+const CHECK_EVERY = 24 * 60 * 60 * 1000;
 
 // ── palette ────────────────────────────────────────────────────────────────
 const tty = process.stdout.isTTY && !process.env.NO_COLOR;
@@ -26,13 +31,16 @@ const mint  = c("38;2;62;207;142");
 const red   = c("38;2;255;123;114");
 
 // ── banner ─────────────────────────────────────────────────────────────────
-function banner(model) {
+function banner(model, latest) {
   const cwd = process.cwd().replace(os.homedir(), "~");
   const engine = model ? `Ollama · ${model}` : "Ollama";
   console.log();
   console.log(` ${white("████████")}  ${white("magiccode")} ${haze("v" + VERSION)}`);
   console.log(` ${white("██")} ${amber("██")} ${white("██")}  ${haze(engine)}`);
   console.log(` ${white("██")} ${amber("██")} ${white("██")}  ${haze(cwd)}`);
+  if (latest && newer(latest, VERSION)) {
+    console.log(`\n  ${amber("update available")} ${haze(VERSION + " → " + latest)}  ${haze("run")} ${white("magiccode update")}`);
+  }
   console.log();
 }
 
@@ -44,6 +52,7 @@ Commands:
   magiccode chat           Open the prompt explicitly
   magiccode "<request>"    One-shot: ask and exit
   magiccode models         List the models Ollama has pulled
+  magiccode update         Update to the latest version
   magiccode help           Show this message
 
 Environment:
@@ -288,6 +297,83 @@ async function runTool(name, args) {
 }
 
 
+
+// ── updates ────────────────────────────────────────────────────────────────
+const newer = (a, b) => {                       // is a newer than b?
+  const pa = String(a).split(".").map(Number), pb = String(b).split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) > (pb[i] || 0)) return true;
+    if ((pa[i] || 0) < (pb[i] || 0)) return false;
+  }
+  return false;
+};
+
+// at most once a day, never blocking for long, never fatal
+async function latestVersion() {
+  try {
+    const cached = JSON.parse(fs.readFileSync(CHECK_FILE, "utf8"));
+    if (Date.now() - cached.t < CHECK_EVERY) return cached.latest;
+  } catch {}
+  try {
+    const res = await fetch(VERSION_URL, { signal: AbortSignal.timeout(1500) });
+    const { version } = await res.json();
+    fs.mkdirSync(STATE_DIR, { recursive: true });
+    fs.writeFileSync(CHECK_FILE, JSON.stringify({ t: Date.now(), latest: version }));
+    return version;
+  } catch {
+    return null;                                // offline is not an error
+  }
+}
+
+// where this script actually lives, following any symlink
+function installedAt() {
+  try { return fs.realpathSync(process.argv[1]); } catch { return process.argv[1]; }
+}
+
+// running out of a git checkout? then git is the update mechanism, not us
+function checkoutRoot(file) {
+  let dir = path.dirname(file);
+  for (let i = 0; i < 8; i++) {
+    if (fs.existsSync(path.join(dir, ".git"))) return dir;
+    const up = path.dirname(dir);
+    if (up === dir) break;
+    dir = up;
+  }
+  return null;
+}
+
+async function update() {
+  const target = installedAt();
+  const repo = checkoutRoot(target);
+  if (repo) {
+    console.log(`  ${haze("this copy is a git checkout:")} ${repo.replace(os.homedir(), "~")}`);
+    console.log(`  ${haze("update it with:")}  ${white("git -C " + repo.replace(os.homedir(), "~") + " pull")}\n`);
+    return;
+  }
+  console.log(`  ${haze("updating")} ${target.replace(os.homedir(), "~")}`);
+  let body;
+  try {
+    const res = await fetch(RAW_URL, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error(`github returned ${res.status}`);
+    body = await res.text();
+  } catch (err) {
+    console.error(`  ${red("✗")} could not download: ${err.message}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  const found = body.match(/VERSION\s*=\s*"([^"]+)"/);
+  if (!found || !body.startsWith("#!")) {
+    console.error(`  ${red("✗")} that download does not look like magiccode — leaving your copy alone\n`);
+    process.exitCode = 1;
+    return;
+  }
+  if (found[1] === VERSION) { console.log(`  ${mint("✓")} already on ${VERSION}\n`); return; }
+  fs.writeFileSync(target + ".tmp", body, { mode: 0o755 });
+  fs.renameSync(target + ".tmp", target);
+  try { fs.rmSync(CHECK_FILE, { force: true }); } catch {}
+  console.log(`  ${mint("✓")} ${VERSION} → ${found[1]}\n`);
+}
+
 // ── interactive prompt ─────────────────────────────────────────────────────
 // Claude Code uses Ink (React + yoga) and opencode uses OpenTUI (solid).
 // Both come down to the same four moves, which need no dependency at all:
@@ -448,18 +534,20 @@ async function agent(request, model, prior) {
   const argv = process.argv.slice(2);
   const cmd = argv[0];
 
-  if (cmd === "help" || cmd === "--help" || cmd === "-h") { banner(null); help(); return; }
+  if (cmd === "update") { console.log(); await update(); return; }
+  if (cmd === "help" || cmd === "--help" || cmd === "-h") { banner(null, await latestVersion()); help(); return; }
   if (cmd === "version" || cmd === "--version" || cmd === "-v") { console.log(VERSION); return; }
 
+  const latest = await latestVersion();
   const models = await listModels();
   if (models === null) {
-    banner(null);
+    banner(null, latest);
     console.error(`${red("✗")} Can't reach Ollama at ${HOST}`);
     console.error(`  Install it from ${white("https://ollama.com")}, then: ${white("ollama serve")}\n`);
     process.exit(1);
   }
   if (models.length === 0) {
-    banner(null);
+    banner(null, latest);
     console.error(`${red("✗")} Ollama has no models pulled.`);
     console.error(`  Try: ${white("ollama pull qwen2.5-coder")}\n`);
     process.exit(1);
@@ -467,23 +555,23 @@ async function agent(request, model, prior) {
 
   const model = process.env.MAGICCODE_MODEL || models[0];
 
-  if (cmd === "chat") { banner(model); await chat(model); return; }
+  if (cmd === "chat") { banner(model, latest); await chat(model); return; }
 
   if (cmd === "models") {
-    banner(model);
+    banner(model, latest);
     for (const m of models) console.log(`  ${m === model ? amber("● ") : haze("○ ")}${m}`);
     console.log();
     return;
   }
 
   if (!cmd) {
-    banner(model);
+    banner(model, latest);
     if (process.stdin.isTTY) { await chat(model); return; }
     help();
     return;
   }
 
-  banner(model);
+  banner(model, latest);
   try {
     await agent(argv.join(" "), model);
   } catch (err) {
