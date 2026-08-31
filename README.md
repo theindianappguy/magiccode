@@ -80,8 +80,13 @@ all unless you set `MAGICCODE_YES=1`.
 
 ## Status
 
-Early. The agent loop, the tools and the approval flow work. `init`, `run`,
-`build` and `deploy` are leftovers from an earlier scaffold and do nothing
-useful yet.
+Early, but real. The agent loop, the five tools, the approval flow, the
+interactive prompt and self-update all work and are tested end to end against
+a local model.
+
+The honest limitation is the model, not the tool: small local models are much
+weaker at multi-step editing than hosted frontier ones. A 7B model will
+sometimes ask what you want instead of doing it. Give it the biggest coding
+model your machine can hold.
 
 Built by [Sanskar Tiwari](https://sanskartiwari.io). MIT.

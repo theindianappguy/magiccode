@@ -10,7 +10,7 @@ const readline = require("readline");
 const { spawnSync } = require("child_process");
 const os = require("os");
 
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 const HOST = (process.env.OLLAMA_HOST || "http://127.0.0.1:11434").replace(/\/$/, "");
 const MAX_STEPS = 16;
 const MAX_READ = 60_000;   // chars returned from a single read_file
